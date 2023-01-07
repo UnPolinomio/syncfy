@@ -1,0 +1,19 @@
+{
+  "name": "syncfy",
+  "version": "0.0.1",
+  "description": "Syncfy keeps your playlists synced in your favorite music platforms",
+  "main": "out/index.js",
+  "repository": "https://github.com/UnPolinomio/syncfy",
+  "author": "Hector Franco T. <42476070+UnPolinomio@users.noreply.github.com>",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc -w",
+    "start": "node --experimental-specifier-resolution=node out/index.js"
+  },
+  "devDependencies": {
+    "typescript": "4.9.4"
+  }
+}
