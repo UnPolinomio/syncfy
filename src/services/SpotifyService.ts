@@ -36,7 +36,7 @@ export class SpotifyService {
         url.searchParams.append('response_type', 'code')
         url.searchParams.append('redirect_uri', AUTHORIZE_REDIRECT_URI)
         url.searchParams.append('state', state)
-        url.searchParams.append('scope', 'playlist-modify-private')
+        url.searchParams.append('scope', 'playlist-modify-private playlist-modify-public playlist-read-private')
 
         const server = createServer(async (req, res) => {
             const url = new URL(req.url!, `http://${req.headers.host}`)
@@ -78,7 +78,6 @@ export class SpotifyService {
             })
 
             const data = await response.json()
-            console.log(data)
             res.writeHead(200, 'OK')
             res.end()
             server.close()
@@ -105,5 +104,19 @@ export class SpotifyService {
         } while(next !== null)
 
         return items
+    }
+
+    async addTracksToPlaylist(playlistId: string, uris: string[]) {
+        const response = await fetch(`${API_URL}/playlists/${playlistId}/tracks`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                uris
+            })
+        })
+        if (!response.ok) throw new Error('Failed to add tracks to playlist')
     }
 }
