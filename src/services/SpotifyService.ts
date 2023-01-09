@@ -89,13 +89,21 @@ export class SpotifyService {
         })
     }
 
-    async getUserPlaylists() {
-        const response = await fetch(`${API_URL}/me/playlists`, {
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`
-            }
-        })
-        const data = await response.json()
-        return data
+    async getPlaylistTracks(playlistId: string) {
+        let next = new URL(`${API_URL}/playlists/${playlistId}/tracks`)
+        const items = []
+        do {
+            const response = await fetch(next, {
+                headers: {
+                    Authorization: `Bearer ${this.accessToken}`
+                }
+            })
+            if (!response.ok) throw new Error('Failed to get playlist tracks')
+            const data = await response.json()
+            items.push(...data.items)
+            next = data.next
+        } while(next !== null)
+
+        return items
     }
 }
