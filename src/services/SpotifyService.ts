@@ -119,4 +119,18 @@ export class SpotifyService {
         })
         if (!response.ok) throw new Error('Failed to add tracks to playlist')
     }
+
+    async removePlaylistTracks(playlistId: string, tracks: { uri: string }[]) {
+        const response = await fetch(`${API_URL}/playlists/${playlistId}/tracks`, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                tracks: tracks.map(track => ({ uri: track.uri }))
+            })
+        })
+        if (!response.ok) throw new Error('Failed to remove tracks from playlist')
+    }
 }
