@@ -1,9 +1,7 @@
-import { createServer } from "http"
+import { getAuthorizationCode, AUTHORIZE_REDIRECT_URI } from "../utils/authServer"
 
 const API_URL = 'https://api.spotify.com/v1'
 const AUTHORIZE_API_URL = 'https://accounts.spotify.com'
-const AUTHORIZE_PORT = 41263
-const AUTHORIZE_REDIRECT_URI = 'https://unpolinomio-automatic-eureka-vqvvxvrgj7v2xj7w-41263.preview.app.github.dev/'
 
 const SCOPES = [
     'playlist-modify-private',
@@ -44,54 +42,24 @@ export class SpotifyService {
         url.searchParams.append('state', state)
         url.searchParams.append('scope', SCOPES.join(' '))
 
-        const server = createServer(async (req, res) => {
-            const url = new URL(req.url!, `http://${req.headers.host}`)
-            const code = url.searchParams.get('code')
-            const error = url.searchParams.get('error')
-            const returnedState = url.searchParams.get('state')
-            if (returnedState !== state) {
-                res.writeHead(400, 'Invalid state')
-                res.end()
-                server.close()
-                return
-            }
-
-            if (error) {
-                res.writeHead(400, error)
-                res.end()
-                server.close()
-                return
-            }
-
-            if (!code) {
-                res.writeHead(400, 'Invalid code')
-                res.end()
-                server.close()
-                return
-            }
-
-            const response = await fetch(`${AUTHORIZE_API_URL}/api/token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    Authorization: 'Basic ' + (new Buffer(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64'))
-                },
-                body: new URLSearchParams({
-                    code,
-                    grant_type: 'authorization_code',
-                    redirect_uri: AUTHORIZE_REDIRECT_URI
-                })
+        const code = await getAuthorizationCode({ authUrl: url.toString(), state })
+        const response = await fetch(`${AUTHORIZE_API_URL}/api/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization: 'Basic ' + Buffer
+                    .from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET)
+                    .toString('base64')
+            },
+            body: new URLSearchParams({
+                code,
+                grant_type: 'authorization_code',
+                redirect_uri: AUTHORIZE_REDIRECT_URI
             })
-
-            const data = await response.json()
-            res.writeHead(200, 'OK')
-            res.end()
-            server.close()
         })
 
-        server.listen(AUTHORIZE_PORT, () => {
-            console.log(`Log in to Spotify at ${url.toString()}`)
-        })
+        const data = await response.json()
+        console.log(data)
     }
 
     async getPlaylistTracks(playlistId: string) {
