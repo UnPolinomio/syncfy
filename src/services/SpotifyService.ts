@@ -5,6 +5,12 @@ const AUTHORIZE_API_URL = 'https://accounts.spotify.com'
 const AUTHORIZE_PORT = 41263
 const AUTHORIZE_REDIRECT_URI = 'https://unpolinomio-automatic-eureka-vqvvxvrgj7v2xj7w-41263.preview.app.github.dev/'
 
+const SCOPES = [
+    'playlist-modify-private',
+    'playlist-modify-public',
+    'playlist-read-private'
+]
+
 export class SpotifyService {
     accessToken: string | undefined
 
@@ -36,7 +42,7 @@ export class SpotifyService {
         url.searchParams.append('response_type', 'code')
         url.searchParams.append('redirect_uri', AUTHORIZE_REDIRECT_URI)
         url.searchParams.append('state', state)
-        url.searchParams.append('scope', 'playlist-modify-private playlist-modify-public playlist-read-private')
+        url.searchParams.append('scope', SCOPES.join(' '))
 
         const server = createServer(async (req, res) => {
             const url = new URL(req.url!, `http://${req.headers.host}`)
