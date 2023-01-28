@@ -1,5 +1,6 @@
 import { getAuthorizationCode, AUTHORIZE_REDIRECT_URI } from "../utils/authServer"
 
+const API_URL = 'https://www.googleapis.com/youtube/v3'
 const AUTHORIZE_API_URL = 'https://accounts.google.com/o/oauth2/v2'
 const OAUTH_API_URL = 'https://oauth2.googleapis.com'
 
@@ -8,28 +9,7 @@ const SCOPES = [
 ]
 
 export class YoutubeService {
-    accessToken: string | undefined
-
-    async init() {
-        const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN
-        if (!refreshToken) throw new Error('No refresh token')
-
-        const response = await fetch(`${OAUTH_API_URL}/token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                client_id: process.env.YOUTUBE_CLIENT_ID!,
-                client_secret: process.env.YOUTUBE_CLIENT_SECRET!,
-                grant_type: 'refresh_token',
-                refresh_token: refreshToken
-            })
-        })
-        if(!response.ok) throw new Error('Failed to refresh token')
-        const data = await response.json()
-        this.accessToken = data.access_token
-    }
+    private constructor(protected accessToken: string) { }
 
     static async authenticate() {
         const state = Math.random().toString(36).substring(2, 15)
@@ -53,10 +33,49 @@ export class YoutubeService {
                 client_secret: process.env.YOUTUBE_CLIENT_SECRET!,
                 code,
                 grant_type: 'authorization_code',
-                redirect_uri: AUTHORIZE_REDIRECT_URI // 
+                redirect_uri: AUTHORIZE_REDIRECT_URI
             })
         })
+        if(!response.ok) throw new Error('Failed to get refresh token: ' + await response.text())
         const data = await response.json()
-        console.log({ data })
+
+        return { refreshToken: data.refresh_token, accessToken: data.access_token }
+    }
+
+    static async getAccessToken(refreshToken: string) {
+        const response = await fetch(`${OAUTH_API_URL}/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: process.env.YOUTUBE_CLIENT_ID!,
+                client_secret: process.env.YOUTUBE_CLIENT_SECRET!,
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken
+            })
+        })
+        if(!response.ok) throw new Error('Failed to refresh token: ' + await response.text())
+        const data = await response.json()
+
+        return data.access_token
+    }
+
+    static async init() {
+        const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN
+        
+        if(!refreshToken) {
+            const { accessToken } = await YoutubeService.authenticate()
+            return new YoutubeService(accessToken)
+        }
+
+        try {
+            const accessToken = await YoutubeService.getAccessToken(refreshToken)
+            return new YoutubeService(accessToken)
+        } catch (e: any) {
+            if(!e.message.includes('invalid_grant')) throw e
+            const { accessToken }= await YoutubeService.authenticate()
+            return new YoutubeService(accessToken)
+        }
     }
 }
