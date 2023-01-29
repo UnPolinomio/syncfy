@@ -6,7 +6,9 @@ const AUTHORIZE_API_URL = 'https://accounts.spotify.com'
 const SCOPES = [
     'playlist-modify-private',
     'playlist-modify-public',
-    'playlist-read-private'
+    'playlist-read-private',
+    'user-library-modify',
+    'user-library-read'
 ]
 
 export class SpotifyService {
@@ -79,8 +81,10 @@ export class SpotifyService {
         return { refreshToken: data.refresh_token, accessToken: data.access_token }
     }
 
-    async getPlaylistTracks(playlistId: string) {
-        let next = new URL(`${API_URL}/playlists/${playlistId}/tracks`)
+    async getSavedTracks() {
+        let next = new URL(`${API_URL}/me/tracks`)
+        next.searchParams.append('limit', '50')
+
         const items = []
         do {
             const response = await fetch(next, {
@@ -88,7 +92,27 @@ export class SpotifyService {
                     Authorization: `Bearer ${this.accessToken}`
                 }
             })
-            if (!response.ok) throw new Error('Failed to get playlist tracks')
+            if (!response.ok) throw new Error('Failed to get playlist tracks: ' + await response.text())
+            const data = await response.json()
+            items.push(...data.items)
+            next = data.next
+        } while(next !== null)
+
+        return items
+    }
+
+    async getPlaylistTracks(playlistId: string) {
+        let next = new URL(`${API_URL}/playlists/${playlistId}/tracks`)
+        next.searchParams.append('limit', '50')
+
+        const items = []
+        do {
+            const response = await fetch(next, {
+                headers: {
+                    Authorization: `Bearer ${this.accessToken}`
+                }
+            })
+            if (!response.ok) throw new Error('Failed to get playlist tracks: ' + await response.text())
             const data = await response.json()
             items.push(...data.items)
             next = data.next
