@@ -101,4 +101,17 @@ export class YoutubeService {
         })
         if(!response.ok) throw new Error('Failed to add track to playlist: ' + await response.text())
     }
+
+    async removeTrackFromPlaylist(playlistItemId: string) {
+        const url = new URL(`${API_URL}/playlistItems`)
+        url.searchParams.append('id', playlistItemId)
+
+        const response = await fetch(url.toString(), {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${this.accessToken}`
+            }
+        })
+        if(!response.ok) throw new Error('Failed to remove track from playlist: ' + await response.text())
+    }
 }
