@@ -78,4 +78,27 @@ export class YoutubeService {
             return new YoutubeService(accessToken)
         }
     }
+
+    async addTrackToPlaylist(playlistId: string, videoId: string) {
+        const url = new URL(`${API_URL}/playlistItems`)
+        url.searchParams.append('part', 'snippet')
+        
+        const response = await fetch(url.toString(), {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                snippet: {
+                    playlistId,
+                    resourceId: {
+                        kind: 'youtube#video',
+                        videoId
+                    }
+                }
+            })
+        })
+        if(!response.ok) throw new Error('Failed to add track to playlist: ' + await response.text())
+    }
 }
