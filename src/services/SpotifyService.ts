@@ -10,26 +10,42 @@ const SCOPES = [
 ]
 
 export class SpotifyService {
-    accessToken: string | undefined
+    private constructor(protected accessToken: string) { }
 
-    async init() {
+    static async init() {
         const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN
-        if (!refreshToken) throw new Error('No refresh token')
+        if(!refreshToken) {
+            const { accessToken } = await SpotifyService.authenticate()
+            return new SpotifyService(accessToken)
+        }
 
+        try {
+            const accessToken = await SpotifyService.getAccessToken(refreshToken)
+            return new SpotifyService(accessToken)
+        } catch (e: any) {
+            if(!e.message.includes('invalid_grant')) throw e
+            const { accessToken }= await SpotifyService.authenticate()
+            return new SpotifyService(accessToken)
+        }
+    }
+
+    static async getAccessToken(refreshToken: string) {
         const response = await fetch(`${AUTHORIZE_API_URL}/api/token`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                Authorization: 'Basic ' + (new Buffer(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64'))
+                Authorization: 'Basic ' + Buffer.from(
+                    process.env.SPOTIFY_CLIENT_ID! + ':' + process.env.SPOTIFY_CLIENT_SECRET!
+                ).toString('base64')
             },
             body: new URLSearchParams({
                 grant_type: 'refresh_token',
                 refresh_token: refreshToken
             })
         })
-        if(! response.ok) throw new Error('Failed to refresh token')
+        if(!response.ok) throw new Error('Failed to refresh token: ' + await response.text())
         const data = await response.json()
-        this.accessToken = data.access_token
+        return data.access_token
     }
 
     static async authenticate() {
@@ -57,9 +73,10 @@ export class SpotifyService {
                 redirect_uri: AUTHORIZE_REDIRECT_URI
             })
         })
+        if(!response.ok) throw new Error('Failed to authenticate: ' + await response.text())
 
         const data = await response.json()
-        console.log(data)
+        return { refreshToken: data.refresh_token, accessToken: data.access_token }
     }
 
     async getPlaylistTracks(playlistId: string) {
